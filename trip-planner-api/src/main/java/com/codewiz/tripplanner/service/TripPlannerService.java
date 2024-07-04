@@ -1,25 +1,46 @@
 package com.codewiz.tripplanner.service;
 
-import com.codewiz.tripplanner.model.PlaceRecommendation;
-import com.codewiz.tripplanner.model.PlaceRecords;
-import com.codewiz.tripplanner.model.WeatherRecords;
+import com.codewiz.tripplanner.model.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import io.micrometer.observation.annotation.Observed;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
 import java.util.concurrent.StructuredTaskScope;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class TripPlannerService {
 
     private final PlacesService placesService;
     private final WeatherService weatherService;
+    private final ChatClient chatClient;
+    private final Resource systemPromptTemplate;
+    private final Resource userPromptTemplate;
+
+    public TripPlannerService(PlacesService placesService, WeatherService weatherService
+        , ChatClient.Builder chatClientBuilder,@Value("classpath:/templates/system.st") Resource systemPromptTemplate,
+         @Value("classpath:/templates/user.st") Resource userPromptTemplate) {
+        this.placesService = placesService;
+        this.weatherService = weatherService;
+        this.systemPromptTemplate = systemPromptTemplate;
+        this.userPromptTemplate = userPromptTemplate;
+        this.chatClient = chatClientBuilder
+            .defaultAdvisors(new SimpleLoggerAdvisor())
+            .build();
+    }
+
 
     @Observed(name="tripPlannerService")
     public List<PlaceRecommendation> getPlaceRecommendation(String location, String travelDate){
@@ -38,7 +59,7 @@ public class TripPlannerService {
                 scope.join();
                 scope.throwIfFailed();
                 List<String> photos = photoSubTasks.stream().map(StructuredTaskScope.Subtask::get).toList();
-                WeatherRecords.WeatherData weather = weatherDataSubtask.get();
+                var weather = weatherDataSubtask.get();
                 return new PlaceRecommendation(place, photos, weather);
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -46,5 +67,24 @@ public class TripPlannerService {
 
         })
         .toList();
+    }
+
+    public List<TravelItineraryItem> getTripRecommendation(List<PlaceRecommendation> placeRecommendations, String startDate,
+                                                           String endDate) throws JsonProcessingException {
+        List<PlaceSummary> placeSummaryList = placeRecommendations.stream().map(PlaceSummary::new).toList();
+        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
+        String placeSummaryJson = objectWriter.writeValueAsString(placeSummaryList);
+        Map<String,Object> variablesMap = Map.of(
+                "placeSummaryJson", placeSummaryJson,
+                "startDate", startDate,
+                "endDate", endDate);
+        return this.chatClient.prompt()
+                .system(systemPromptTemplate)
+                .user(u -> u.text(userPromptTemplate).params(variablesMap))
+                .call()
+                .entity(new ParameterizedTypeReference<List<TravelItineraryItem>>() {
+                });
+
     }
 }

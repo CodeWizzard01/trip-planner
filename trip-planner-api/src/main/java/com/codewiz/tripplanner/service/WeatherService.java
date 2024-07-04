@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -42,8 +42,8 @@ public class WeatherService {
     }
 
     @Retryable(retryFor = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
-    public WeatherRecords.WeatherData getWeather(PlaceRecords.Location location, String travelDate){
-        log.info("Getting weather data for location: "+location+" and date: "+travelDate);
+    public List<WeatherRecords.WeatherData> getWeather(PlaceRecords.Location location, String travelDate){
+        log.info("Getting weather data for location: " + location + " and date: " + travelDate);
         String uriString = UriComponentsBuilder.fromUriString("/forecast?lat=-{lat}&lon={long}&appid={apiKey}&units=metric")
                 .buildAndExpand(location.latitude(), location.longitude(), apiKey)
                 .toUriString();
@@ -52,10 +52,8 @@ public class WeatherService {
                 .retrieve()
                 .body(WeatherRecords.WeatherResponse.class);
         return weatherResponse.list().stream()
-                .filter(weatherData -> weatherData.dtTxt().startsWith(travelDate))
-                .findFirst()
-                .orElseThrow(()->new NoDataFoundException("No weather data found for the date",100));
-
+                .filter(weatherData -> weatherData.dtTxt().endsWith("12:00:00"))
+                .collect(Collectors.toList());
     }
 
     @Recover
