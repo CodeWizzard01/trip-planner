@@ -6,19 +6,22 @@ import { useState } from "react";
 
 
 
+
 function App() {
   const [location, setLocation] = useState("London");
-  const [travelDate, setTravelDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date(new Date().setDate(new Date().getDate() + 6)));
 
-  const onSearch = (location: string, travelDate: Date) => {
+  const onSearch = (location: string, startDate: Date, endDate: Date) => {
     setLocation(location);
-    setTravelDate(travelDate);
-  }
+    setStartDate(startDate);
+    setEndDate(endDate);
+  };
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <Header onSearch={onSearch} />
-      <Places location={location}  travelDate={travelDate} />
+      <Places location={location} startDate={startDate} endDate={ endDate} />
     </ThemeProvider>
   );
 }

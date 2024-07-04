@@ -1,47 +1,57 @@
 import React, { useEffect, useState } from "react";
 
-import { placesData } from "../mock/mockData";
 import Place from "./place";
+import { PlaceData, TravelPlanItem } from '@/types/types';
 
 function Places({
   location,
-  travelDate,
+  startDate,
+  endDate,
 }: {
   location: string;
-  travelDate: Date | null;
+    startDate: Date | null;
+    endDate: Date | null;
 }) {
-  const [places, setPlaces] = useState([]);
+  const [places, setPlaces] = useState<PlaceData[]>([]);
+  const [travelPlan, setTravelPlan] = useState<TravelPlanItem[]>([]);
+
+  const getPlaceByAddress = (address: string) =>
+    places.find((place) => place.place.formattedAddress === address) ||
+    places.find((place) => address.startsWith(place.place.displayName.text));
 
   useEffect(() => {
-    console.log(location, travelDate);
-    if (location && travelDate) {
-      const formattedDate = travelDate.toISOString().split("T")[0]; // Format date as YYYY-MM-DD
-      const apiUrl = `http://localhost:8080/trip-planner/${encodeURIComponent(
+    console.log(location, startDate);
+    if (location && startDate && startDate) {
+      const formattedStartDate = startDate.toISOString().split("T")[0]; 
+      const formattedEndDate = startDate.toISOString().split("T")[0];
+      const apiUrl = `http://localhost:8080/trip-planner/trip-recommendation/${encodeURIComponent(
         location
-      )}/${formattedDate}`;
+      )}/${formattedStartDate}/${formattedEndDate}`;
 
       fetch(apiUrl)
         .then((response) => response.json())
         .then((data) => {
-          console.log(data);
-          setPlaces(data);
+          setPlaces(data.placesToVisit);
+          setTravelPlan(data.travelPlan);
         })
         .catch((error) => console.error("Error fetching places:", error));
+
     }
-  }, [location, travelDate]); // Dependency array, re-run effect if these values change
+  }, [location, startDate,endDate]); 
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(5, 1fr)",
-        gap: "20px", // Adjust the gap as needed
-        padding: "20px", // Adds some padding around the grid
-      }}
-    >
-      {places.map((placeData, index) => (
-        <Place key={index} index={index} placeData={placeData} />
-      ))}
+    <div>
+      {travelPlan.map((travelPlanItem, index) => {
+        const placeData = getPlaceByAddress(travelPlanItem.address);
+        return placeData ? (
+          <Place
+            key={index}
+            index={index}
+            placeData={placeData}
+            travelPlanItem={travelPlanItem}
+          />
+        ) : null;
+      })}
     </div>
   );
 }

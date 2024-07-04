@@ -1,35 +1,36 @@
-import { Card, CardContent } from '@/components/ui/card';
-import Typography from '@/components/ui/typography';
-import { PlaceData } from '@/types/types';
+import { PlaceData, TravelPlanItem } from '@/types/types';
 import React from 'react'
 import Weather from './weather';
+import Recommendation from './recommendation';
+import PlaceDetails from './place-details';
 
-function Place({ index, placeData }: { index: number, placeData: PlaceData }) {
+function Place({
+  index,
+  placeData,
+  travelPlanItem,
+}: {
+  index: number;
+  placeData: PlaceData;
+  travelPlanItem: TravelPlanItem;
+  }) {
   return (
-    <Card key={index} style={{ margin: "20px", width: "300px" }}>
-      <div
-        style={{
-          backgroundImage: `url(${placeData.photos[0]})`,
-          backgroundSize: "cover",
-          height: "200px",
-          width: "100%",
-        }}
-      />
-      <CardContent className="grid gap-4">
-        <Typography element="h3" as="h3">
-          {placeData.place.displayName.text} -{" "}
-          {placeData.place.primaryTypeDisplayName?.text}
-        </Typography>
-        <Typography element="p" as="p">
-          {placeData.place.formattedAddress}
-        </Typography>
-        <Typography
-          element="p"
-          as="p"
-              >{`Rating: ${placeData.place.rating}`}</Typography>
-        <Weather placeData={placeData} />
-      </CardContent>
-    </Card>
+    <div
+      style={{
+        display: "inline-grid",
+        gridTemplateColumns: "repeat(5, 1fr)",
+        gap: "1px",
+        padding: "1px",
+        border: "1px solid #ccc",
+        borderRadius: "10px",
+        margin: "5px",
+        width: "48%",
+        height: "530px",
+      }}
+    >
+      <PlaceDetails index={index} placeData={placeData} />
+      <Recommendation index={index} travelPlanItem={travelPlanItem} />
+      <Weather placeData={placeData} index={index} />
+    </div>
   );
 }
 

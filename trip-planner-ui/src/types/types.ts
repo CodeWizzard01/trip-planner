@@ -1,3 +1,17 @@
+export type TravelPlanItem = {
+  address: string;
+  date: string;
+  time: string;
+  activity: string;
+  reasonForChoosing: string;
+};
+
+export type TripRecommendation = {
+  placesToVisit: PlaceData[];
+  travelPlan: TravelPlanItem[];
+};
+
+
 export type PlaceData = {
     place: {
       internationalPhoneNumber: string | null;
@@ -19,7 +33,7 @@ export type PlaceData = {
       photos: unknown[];
     };
     photos: string[];
-    weatherData: WeatherData;
+    weatherDataList: WeatherData[];
   };
   
   type WeatherData = {
